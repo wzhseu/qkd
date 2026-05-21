@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QKD 5G Secure Network Center</title>
+  <style>
+    :root {
+      --bg: #06111f;
+      --bg-2: #0a182a;
+      --panel: rgba(9, 26, 44, .86);
+      --panel-solid: #0c1d31;
+      --panel-soft: rgba(18, 43, 67, .72);
+      --line: rgba(118, 205, 255, .22);
+      --line-strong: rgba(110, 237, 214, .42);
+      --text: #eef8ff;
+      --muted: #9bb7cb;
+      --cyan: #3ddcff;
+      --cyan-soft: rgba(61, 220, 255, .14);
+      --teal: #55f0c3;
+      --teal-soft: rgba(85, 240, 195, .13);
+      --violet: #9d8cff;
+      --warning: #ffd166;
+      --danger: #ff6b7a;
+      --danger-soft: rgba(255, 107, 122, .12);
+      --shadow: 0 22px 48px rgba(0, 0, 0, .34);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(61, 220, 255, .18), transparent 34rem),
+        radial-gradient(circle at 85% 12%, rgba(85, 240, 195, .12), transparent 30rem),
+        linear-gradient(180deg, #06111f 0%, #081525 44%, #07111d 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    button, select {
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, .06);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 15px;
+      cursor: pointer;
+      font-weight: 750;
+      white-space: nowrap;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: var(--line-strong);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .45;
+      transform: none;
+    }
+
+    select {
+      width: 100%;
+      padding: 0 12px;
+      color-scheme: dark;
+    }
+
+    .shell {
+      width: min(1480px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 22px 0 34px;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 315px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(118, 205, 255, .25);
+      border-radius: 14px;
+      background:
+        linear-gradient(90deg, rgba(3, 13, 26, .95) 0%, rgba(3, 13, 26, .82) 39%, rgba(3, 13, 26, .2) 74%),
+        linear-gradient(180deg, rgba(6, 17, 31, .08), rgba(6, 17, 31, .45)),
+        url("/qkd-5g-hero.png") center right / cover no-repeat;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(61, 220, 255, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(61, 220, 255, .08) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: linear-gradient(90deg, rgba(0,0,0,.7), rgba(0,0,0,.2), transparent);
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--teal), transparent);
+      opacity: .95;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 22px;
+      min-height: 315px;
+      padding: 28px;
+      align-items: end;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 28px;
+      margin-bottom: 14px;
+      padding: 5px 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: rgba(6, 24, 39, .74);
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 820;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 0 6px rgba(85, 240, 195, .12), 0 0 18px rgba(85, 240, 195, .95);
+    }
+
+    h1 {
+      max-width: 760px;
+      font-size: clamp(30px, 4vw, 54px);
+      line-height: 1.08;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      margin-top: 14px;
+      color: #bad5e8;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 22px;
+    }
+
+    .tag, .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(9, 28, 47, .72);
+      color: #c7e6f7;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .hero-status {
+      align-self: stretch;
+      display: grid;
+      align-content: end;
+      gap: 10px;
+    }
+
+    .status-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(6, 20, 35, .78);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, .24);
+      backdrop-filter: blur(10px);
+    }
+
+    .status-card-inner {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .network-line {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 8px;
+      align-items: center;
+      color: #dff8ff;
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .node {
+      display: grid;
+      place-items: center;
+      min-height: 42px;
+      border: 1px solid rgba(85, 240, 195, .32);
+      border-radius: 8px;
+      background: rgba(85, 240, 195, .08);
+      text-align: center;
+    }
+
+    .link {
+      height: 1px;
+      width: 26px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      box-shadow: 0 0 12px rgba(61, 220, 255, .9);
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      position: relative;
+      min-height: 126px;
+      padding: 17px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background:
+        linear-gradient(135deg, rgba(61, 220, 255, .12), transparent 50%),
+        rgba(9, 26, 44, .78);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .22);
+    }
+
+    .stat::after {
+      content: "";
+      position: absolute;
+      right: -28px;
+      bottom: -34px;
+      width: 110px;
+      height: 110px;
+      border: 1px solid rgba(61, 220, 255, .2);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(85, 240, 195, .14), transparent 68%);
+    }
+
+    .stat-label {
+      position: relative;
+      z-index: 1;
+      color: #9fc5db;
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .stat-value {
+      position: relative;
+      z-index: 1;
+      margin-top: 13px;
+      font-size: 36px;
+      line-height: 1;
+      font-weight: 860;
+      color: #ffffff;
+      text-shadow: 0 0 20px rgba(61, 220, 255, .36);
+    }
+
+    .stat-note {
+      position: relative;
+      z-index: 1;
+      margin-top: 11px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .22);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 58px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(25, 58, 84, .78), rgba(10, 29, 49, .72));
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 17px;
+      font-weight: 820;
+    }
+
+    .panel-title::before {
+      content: "";
+      width: 7px;
+      height: 18px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--cyan), var(--teal));
+      box-shadow: 0 0 14px rgba(85, 240, 195, .55);
+    }
+
+    .panel-subtle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .security-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+      color: #d8f7ff;
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .flow-step {
+      min-height: 46px;
+      display: grid;
+      place-items: center;
+      padding: 8px;
+      border: 1px solid rgba(61, 220, 255, .24);
+      border-radius: 8px;
+      background: rgba(61, 220, 255, .08);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .flow-arrow {
+      color: var(--teal);
+      text-shadow: 0 0 14px rgba(85, 240, 195, .8);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 850px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid rgba(118, 205, 255, .13);
+      text-align: left;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    th {
+      background: rgba(61, 220, 255, .08);
+      color: #b8d9ed;
+      font-weight: 780;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: rgba(61, 220, 255, .055); }
+
+    .device-name {
+      display: grid;
+      gap: 4px;
+    }
+
+    .device-id {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 60px;
+      min-height: 24px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 780;
+      white-space: nowrap;
+    }
+
+    .online {
+      border: 1px solid rgba(85, 240, 195, .28);
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .offline {
+      border: 1px solid rgba(155, 183, 203, .2);
+      background: rgba(155, 183, 203, .1);
+      color: #aac0d0;
+    }
+
+    .busy {
+      border: 1px solid rgba(61, 220, 255, .32);
+      background: var(--cyan-soft);
+      color: var(--cyan);
+    }
+
+    .level-info {
+      border: 1px solid rgba(61, 220, 255, .28);
+      background: var(--cyan-soft);
+      color: var(--cyan);
+    }
+
+    .level-warning {
+      border: 1px solid rgba(255, 209, 102, .28);
+      background: rgba(255, 209, 102, .12);
+      color: var(--warning);
+    }
+
+    .level-error {
+      border: 1px solid rgba(255, 107, 122, .28);
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .pair-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field label {
+      color: #bad5e8;
+      font-size: 13px;
+      font-weight: 740;
+    }
+
+    .primary-btn {
+      width: 100%;
+      border-color: rgba(85, 240, 195, .6);
+      background: linear-gradient(135deg, #0cb6d8, #18c99b);
+      color: #031521;
+      box-shadow: 0 12px 24px rgba(24, 201, 155, .18);
+    }
+
+    .danger-btn {
+      border-color: rgba(255, 107, 122, .28);
+      background: var(--danger-soft);
+      color: #ffb3bd;
+    }
+
+    .message {
+      min-height: 36px;
+      padding: 9px 11px;
+      border-radius: 7px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .message.success {
+      border: 1px solid rgba(85, 240, 195, .24);
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .message.error {
+      border: 1px solid rgba(255, 107, 122, .26);
+      background: var(--danger-soft);
+      color: #ffb3bd;
+    }
+
+    .session-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .session-card {
+      display: grid;
+      gap: 11px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background:
+        linear-gradient(135deg, rgba(61, 220, 255, .08), rgba(85, 240, 195, .05)),
+        rgba(8, 25, 42, .72);
+    }
+
+    .session-route {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 8px;
+      align-items: center;
+      color: #edfbff;
+      font-weight: 790;
+    }
+
+    .session-route span {
+      overflow-wrap: anywhere;
+    }
+
+    .session-route .route-icon {
+      color: var(--teal);
+      text-shadow: 0 0 14px rgba(85, 240, 195, .85);
+    }
+
+    .session-meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .empty {
+      padding: 28px 12px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .logs {
+      display: grid;
+      max-height: 440px;
+      overflow-y: auto;
+    }
+
+    .log-row {
+      display: grid;
+      grid-template-columns: 142px 88px minmax(0, 1fr);
+      gap: 12px;
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(118, 205, 255, .13);
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .log-row:nth-child(odd) { background: rgba(255, 255, 255, .025); }
+    .log-row:last-child { border-bottom: 0; }
+
+    .log-message {
+      overflow-wrap: anywhere;
+      color: #cce5f4;
+    }
+
+    @media (max-width: 1120px) {
+      .hero-content { grid-template-columns: 1fr; align-items: end; }
+      .hero-status { max-width: 430px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .shell {
+        width: min(100% - 20px, 1480px);
+        padding-top: 12px;
+      }
+
+      .hero { min-height: 0; }
+      .hero-content { min-height: 0; padding: 20px; }
+      h1 { font-size: 28px; }
+      .stats { grid-template-columns: 1fr; }
+      .network-line, .security-flow {
+        grid-template-columns: 1fr;
+      }
+      .link, .flow-arrow {
+        width: auto;
+        height: auto;
+        text-align: center;
+      }
+      .log-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="shell">
+    <header class="hero">
+      <div class="hero-content">
+        <section>
+          <p class="eyebrow"><span class="pulse"></span>QKD 5G Secure Network</p>
+          <h1>&#37327;&#23376;&#23494;&#38053;&#21152;&#23494; 5G &#36890;&#20449;&#32593;&#32476;&#31649;&#29702;&#20013;&#24515;</h1>
+          <p class="subtitle">&#38754;&#21521;&#36710;&#31471;&#19982; IoT &#35774;&#22791;&#30340;&#20113;&#31471;&#36890;&#20449;&#25351;&#25381;&#33329;&#65292;&#32479;&#19968;&#30417;&#25511;&#35774;&#22791;&#25509;&#20837;&#12289;&#23494;&#38053;&#23433;&#20840;&#38142;&#36335;&#12289;&#19968;&#23545;&#19968;&#20250;&#35805;&#37197;&#23545;&#19982;&#21407;&#22987;&#25968;&#25454;&#36716;&#21457;&#29366;&#24577;&#12290;</p>
+          <div class="hero-tags">
+            <span class="tag">&#37327;&#23376;&#23494;&#38053;&#38142;&#36335;</span>
+            <span class="tag">5G &#25509;&#20837;&#33410;&#28857;</span>
+            <span class="tag">&#20113;&#31471;&#36716;&#21457;&#20013;&#24515;</span>
+            <span class="tag">&#19968;&#23545;&#19968;&#23433;&#20840;&#20250;&#35805;</span>
+          </div>
+        </section>
+
+        <aside class="hero-status">
+          <div class="status-card">
+            <div class="status-card-inner">
+              <div class="network-line">
+                <span class="node">&#36710;&#31471; / IoT</span>
+                <span class="link"></span>
+                <span class="node">QKD &#20113;&#31471;</span>
+                <span class="link"></span>
+                <span class="node">5G &#32593;&#32476;</span>
+              </div>
+              <div class="hero-meta">
+                <span class="meta-pill">&#35774;&#22791;&#31471;&#21475; 8080</span>
+                <span class="meta-pill">&#31649;&#29702;&#31471;&#21475; 8088</span>
+                <span class="meta-pill">&#21047;&#26032; {{ now }}</span>
+                <span class="meta-pill">&#22312;&#32447; {{ stats.online_devices || 0 }} &#21488;</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </header>
+
+    <section class="stats">
+      <article class="stat">
+        <div class="stat-label">&#22312;&#32447;&#35774;&#22791;</div>
+        <div class="stat-value">{{ stats.online_devices || 0 }}</div>
+        <div class="stat-note">&#24403;&#21069;&#21487;&#36827;&#34892;&#23433;&#20840;&#20250;&#35805;&#37197;&#23545;&#30340;&#25509;&#20837;&#31471;&#12290;</div>
+      </article>
+      <article class="stat">
+        <div class="stat-label">&#32047;&#35745;&#25509;&#20837;</div>
+        <div class="stat-value">{{ stats.total_devices || devices.length }}</div>
+        <div class="stat-note">&#26412;&#27425;&#20113;&#31471;&#26381;&#21153;&#21551;&#21160;&#21518;&#35760;&#24405;&#30340;&#35774;&#22791;&#25968;&#12290;</div>
+      </article>
+      <article class="stat">
+        <div class="stat-label">&#31354;&#38386;&#33410;&#28857;</div>
+        <div class="stat-value">{{ idleDevices.length }}</div>
+        <div class="stat-note">&#22312;&#32447;&#20294;&#26410;&#21152;&#20837;&#19968;&#23545;&#19968;&#36890;&#20449;&#30340;&#35774;&#22791;&#12290;</div>
+      </article>
+      <article class="stat">
+        <div class="stat-label">&#23433;&#20840;&#20250;&#35805;</div>
+        <div class="stat-value">{{ sessions.length }}</div>
+        <div class="stat-note">&#24403;&#21069;&#27491;&#22312;&#36827;&#34892;&#21407;&#22987; bytes &#36716;&#21457;&#30340;&#28857;&#23545;&#28857;&#38142;&#36335;&#12290;</div>
+      </article>
+    </section>
+
+    <main class="workspace">
+      <section class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">&#25509;&#20837;&#35774;&#22791;</h2>
+            <span class="panel-subtle">{{ devices.length }} &#21488;&#35774;&#22791;</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>&#35774;&#22791;</th>
+                  <th>IP</th>
+                  <th>&#29366;&#24577;</th>
+                  <th>&#24403;&#21069;&#36890;&#20449;&#23545;&#35937;</th>
+                  <th>&#25509;&#20837;&#26102;&#38388;</th>
+                  <th>&#26368;&#36817;&#27963;&#21160;</th>
+                  <th>&#28040;&#24687;&#25968;</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="device in devices" :key="device.device_id">
+                  <td>
+                    <div class="device-name">
+                      <strong>{{ device.name || device.device_id }}</strong>
+                      <span class="device-id">{{ device.device_id }}</span>
+                    </div>
+                  </td>
+                  <td>{{ device.ip || '-' }}</td>
+                  <td>
+                    <span class="badge" :class="device.status === 'online' ? (device.current_peer ? 'busy' : 'online') : 'offline'">
+                      {{ device.status === 'online' ? (device.current_peer ? '\u901a\u4fe1\u4e2d' : '\u5728\u7ebf') : '\u79bb\u7ebf' }}
+                    </span>
+                  </td>
+                  <td>{{ device.current_peer || '-' }}</td>
+                  <td>{{ formatTime(device.connected_at) }}</td>
+                  <td>{{ formatTime(device.last_seen) }}</td>
+                  <td>{{ device.messages_forwarded || 0 }}</td>
+                </tr>
+                <tr v-if="devices.length === 0">
+                  <td colspan="7" class="empty">&#26242;&#26080;&#35774;&#22791;&#25509;&#20837;</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">&#26381;&#21153;&#22120;&#26085;&#24535;</h2>
+            <span class="panel-subtle">&#26368;&#36817; {{ logs.length }} &#26465;</span>
+          </div>
+          <div class="logs">
+            <div class="log-row" v-for="log in logs" :key="log.id || (log.timestamp + log.message)">
+              <span>{{ formatTime(log.timestamp) }}</span>
+              <span class="badge" :class="'level-' + (log.level || 'info')">{{ log.level || 'info' }}</span>
+              <span class="log-message">{{ log.message }}</span>
+            </div>
+            <div v-if="logs.length === 0" class="empty">&#26242;&#26080;&#26085;&#24535;</div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">&#21019;&#24314;&#23433;&#20840;&#36890;&#20449;</h2>
+          </div>
+          <div class="panel-body">
+            <div class="security-flow">
+              <span class="flow-step">&#36873;&#25321;&#35774;&#22791;</span>
+              <span class="flow-arrow">-&gt;</span>
+              <span class="flow-step">&#20113;&#31471;&#37197;&#23545;</span>
+              <span class="flow-arrow">-&gt;</span>
+              <span class="flow-step">&#21452;&#21521;&#36716;&#21457;</span>
+            </div>
+            <div class="pair-form">
+              <div class="field">
+                <label for="sourceDevice">&#35774;&#22791;&#19968;</label>
+                <select id="sourceDevice" v-model="sourceDevice">
+                  <option value="">&#35831;&#36873;&#25321;&#22312;&#32447;&#35774;&#22791;</option>
+                  <option v-for="device in onlineDevices" :key="device.device_id" :value="device.device_id">
+                    {{ device.name || device.device_id }} ({{ device.device_id }})
+                  </option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="targetDevice">&#35774;&#22791;&#20108;</label>
+                <select id="targetDevice" v-model="targetDevice">
+                  <option value="">&#35831;&#36873;&#25321;&#22312;&#32447;&#35774;&#22791;</option>
+                  <option v-for="device in onlineDevices" :key="device.device_id" :value="device.device_id">
+                    {{ device.name || device.device_id }} ({{ device.device_id }})
+                  </option>
+                </select>
+              </div>
+              <button class="primary-btn" :disabled="!canPair" @click="createSession">&#24314;&#31435;&#36890;&#20449;&#20250;&#35805;</button>
+              <div v-if="message" class="message" :class="messageType">{{ message }}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">&#24403;&#21069;&#23433;&#20840;&#20250;&#35805;</h2>
+            <span class="panel-subtle">{{ sessions.length }} &#20010;&#20250;&#35805;</span>
+          </div>
+          <div class="panel-body">
+            <div class="session-list" v-if="sessions.length">
+              <article class="session-card" v-for="session in sessions" :key="session.session_id">
+                <div class="session-route">
+                  <span>{{ session.source_device_id }}</span>
+                  <span class="route-icon">&lt;-&gt;</span>
+                  <span>{{ session.target_device_id }}</span>
+                </div>
+                <div class="session-meta">&#21019;&#24314;&#26102;&#38388; {{ formatTime(session.created_at) }}</div>
+                <button class="danger-btn" @click="deleteSession(session.session_id)">&#26029;&#24320;&#36890;&#20449;</button>
+              </article>
+            </div>
+            <div v-else class="empty">&#26242;&#26080;&#36890;&#20449;&#20250;&#35805;</div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script src="/vue.min.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: {
+        devices: [],
+        sessions: [],
+        logs: [],
+        stats: {},
+        sourceDevice: '',
+        targetDevice: '',
+        message: '',
+        messageType: 'success',
+        now: '-',
+        timer: null
+      },
+      computed: {
+        onlineDevices() {
+          return this.devices.filter((device) => device.status === 'online');
+        },
+        idleDevices() {
+          return this.onlineDevices.filter((device) => !device.current_peer);
+        },
+        canPair() {
+          return this.sourceDevice && this.targetDevice && this.sourceDevice !== this.targetDevice;
+        }
+      },
+      mounted() {
+        this.refreshAll();
+        this.timer = setInterval(this.refreshAll, 2000);
+      },
+      beforeDestroy() {
+        clearInterval(this.timer);
+      },
+      methods: {
+        async refreshAll() {
+          await Promise.all([this.loadDevices(), this.loadSessions(), this.loadLogs()]);
+          this.now = new Date().toLocaleTimeString();
+        },
+        async loadDevices() {
+          const response = await fetch('/api/devices');
+          const payload = await response.json();
+          this.devices = payload.devices || payload || [];
+          this.stats = payload.stats || {};
+        },
+        async loadSessions() {
+          const response = await fetch('/api/sessions');
+          const payload = await response.json();
+          this.sessions = payload.sessions || payload || [];
+        },
+        async loadLogs() {
+          const response = await fetch('/api/logs?limit=80');
+          const payload = await response.json();
+          this.logs = payload.logs || payload || [];
+        },
+        async createSession() {
+          if (!this.canPair) {
+            this.showMessage('\u8bf7\u9009\u62e9\u4e24\u53f0\u4e0d\u540c\u7684\u5728\u7ebf\u8bbe\u5907\u3002', 'error');
+            return;
+          }
+
+          const response = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              source_device_id: this.sourceDevice,
+              target_device_id: this.targetDevice
+            })
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            this.showMessage(payload.error || '\u5efa\u7acb\u901a\u4fe1\u5931\u8d25\u3002', 'error');
+            return;
+          }
+          this.showMessage('\u901a\u4fe1\u4f1a\u8bdd\u5df2\u5efa\u7acb\u3002', 'success');
+          this.sourceDevice = '';
+          this.targetDevice = '';
+          this.refreshAll();
+        },
+        async deleteSession(sessionId) {
+          const response = await fetch('/api/sessions/' + encodeURIComponent(sessionId), { method: 'DELETE' });
+          const payload = await response.json();
+          if (!response.ok) {
+            this.showMessage(payload.error || '\u65ad\u5f00\u901a\u4fe1\u5931\u8d25\u3002', 'error');
+            return;
+          }
+          this.showMessage('\u901a\u4fe1\u4f1a\u8bdd\u5df2\u65ad\u5f00\u3002', 'success');
+          this.refreshAll();
+        },
+        showMessage(text, type) {
+          this.message = text;
+          this.messageType = type || 'success';
+          setTimeout(() => {
+            if (this.message === text) {
+              this.message = '';
+            }
+          }, 3000);
+        },
+        formatTime(value) {
+          if (!value) {
+            return '-';
+          }
+          const date = new Date(value);
+          if (Number.isNaN(date.getTime())) {
+            return value;
+          }
+          return date.toLocaleString();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

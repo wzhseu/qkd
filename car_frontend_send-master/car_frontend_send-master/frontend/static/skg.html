@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- <title>Secret Key Generation Platform</title>
+    <link href="{{base_url}}/static/img/favicon.ico" rel="icon" type="image/x-icon"></link>
+    <script src="{{base_url}}/static/js/socket.io.min.js"></script>
+    <script src="{{base_url}}/static/js/axios.min.js"></script>
+    <script src="{{base_url}}/static/js/plotly-2.0.0.min.js"></script>
+    <link href="{{base_url}}/static/css/bootstrap.min.css" rel="stylesheet"></link>
+    <script src="{{base_url}}/static/js/bootstrap.min.js"></script>
+    <script src="{{base_url}}/static/js/skg-client.js"></script> -->
+
+	<title>Secret Key Generation Platform</title>
+    <link href="../static/img/favicon.ico" rel="icon" type="image/x-icon"></link>
+    <script src="../static/js/socket.io.min.js"></script>
+    <script src="../static/js/axios.min.js"></script>
+    <script src="../static/js/plotly-2.0.0.min.js"></script>
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet"></link>
+    <script src="../static/js/bootstrap.min.js"></script>
+    <script src="../static/js/skg-client.js"></script>
+  </head>
+
+  <body>
+    <div class="container mt-3">
+      <nav class="navbar navbar-expand-xxl navbar-light bg-light px-4">
+	<a class="navbar-brand mx-auto">
+	  <h2> Secret Key Generation Platform <span class="badge bg-dark" onclick="skg_toggle_privacy_mode()">NG</span> </h2>
+	</a>
+	<span> v0.0.1 </span>
+      </nav>
+    </div>
+
+    <div class="container-fluid mt-3">
+      <div class="row align-items-start px-4">
+	<!-- Control panel -->
+	<div class="col-4">
+	  <!-- USRP Server Address -->
+	  <div class="mb-3 row">
+	    <label for="usrp-server-addr-form" class="col-sm-4 col-form-label"> USRP Server Address </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<span class="input-group-text"> tcp:// </span>
+		<input type="text" class="form-control" id="usrp-server-addr-form" value="127.0.0.1:5555">
+		<button type="button" class="btn btn-outline-dark" id="test-usrp-server-connection-button"
+			onclick="skg_usrp_server_test_connection()">
+		  Test Connection
+		</button>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Antenna -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-antenna-form" class="col-sm-4 col-form-label"> TX Antenna </label>
+	    <div class="col-sm-8">
+	      <select class="form-select" id="usrp-tx-antenna-form">
+		<option selected value="txrx"> TX/RX </option>
+	      </select>
+	    </div>
+	  </div>
+
+	  <!-- TX Gain -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-gain-form" class="col-sm-4 col-form-label"> TX Gain </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-tx-gain-form" value="0.000000">
+		<span class="input-group-text"> dB </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Sample rate -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-rate-form" class="col-sm-4 col-form-label"> TX Rate </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-tx-rate-form" value="15000000.000000">
+		<span class="input-group-text"> samples/second </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Bandwidth -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-bandwidth-form" class="col-sm-4 col-form-label"> TX Bandwidth </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-tx-bandwidth-form" value="25000000.000000">
+		<span class="input-group-text"> Hz </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Frequency -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-freq-form" class="col-sm-4 col-form-label"> TX Frequency </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-tx-freq-form" value="2500000000.000000">
+		<span class="input-group-text"> Hz </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Samples Per Buffer -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-sample-per-buffer-form" class="col-sm-4 col-form-label"> TX Samples/Buffer </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-tx-sample-per-buffer-form" value="300000">
+		<span class="input-group-text"> samples/buffer </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- RX Antenna -->
+	  <div class="mb-3 row">
+	    <label for="usrp-rx-antenna-form" class="col-sm-4 col-form-label"> RX Antenna </label>
+	    <div class="col-sm-8">
+	      <select class="form-select" id="usrp-rx-antenna-form">
+		<option value="txrx"> TX/RX </option>
+		<option selected value="rx2"> RX2 </option>
+	      </select>
+	    </div>
+	  </div>
+
+	  <!-- RX Gain -->
+	  <div class="mb-3 row">
+	    <label for="usrp-rx-gain-form" class="col-sm-4 col-form-label"> RX Gain </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-rx-gain-form" value="0.000000">
+		<span class="input-group-text"> dB </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- RX Sample rate -->
+	  <div class="mb-3 row">
+	    <label for="usrp-rx-rate-form" class="col-sm-4 col-form-label"> RX Rate </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-rx-rate-form" value="15000000.000000">
+		<span class="input-group-text"> samples/second </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- RX Bandwidth -->
+	  <div class="mb-3 row">
+	    <label for="usrp-rx-bandwidth-form" class="col-sm-4 col-form-label"> RX Bandwidth </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-rx-bandwidth-form" value="25000000.000000">
+		<span class="input-group-text"> Hz </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- RX Frequency -->
+	  <div class="mb-3 row">
+	    <label for="usrp-rx-freq-form" class="col-sm-4 col-form-label"> RX Frequency </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-rx-freq-form" value="2500000000.000000">
+		<span class="input-group-text"> Hz </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- RX Samples Per Buffer -->
+	  <div class="mb-3 row">
+	    <label for="usrp-rx-sample-per-buffer-form" class="col-sm-4 col-form-label"> RX Samples/Buffer </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-rx-sample-per-buffer-form" value="300000">
+		<span class="input-group-text"> samples/buffer </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- RX Maximum Samples -->
+	  <div class="mb-3 row">
+	    <label for="usrp-rx-maximum-samples-form" class="col-sm-4 col-form-label"> RX Maximum Samples </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-rx-maximum-samples-form" value="5200">
+		<span class="input-group-text"> samples </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- Clock Source -->
+	  <div class="mb-3 row">
+	    <label for="usrp-clock-source-form" class="col-sm-4 col-form-label">
+	      Clock Source
+	    </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-clock-source-form" value="internal" disabled>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Prefixed Sine Sample/Period -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-prefix-sine-length-form" class="col-sm-4 col-form-label">
+	      Guarded SINE Wave Length
+	    </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-tx-prefix-sine-length-form" value="20">
+		<span class="input-group-text"> samples/period </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Prefixed Sine Periods -->
+	  <div class="mb-3 row">
+	    <label for="usrp-tx-prefix-sine-periods-form" class="col-sm-4 col-form-label">
+	      Guarded SINE Wave Periods
+	    </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="usrp-tx-prefix-sine-periods-form" value="20">
+		<span class="input-group-text"> periods </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- Update and Reset buttons -->
+	  <div class="mb-3 row justify-content-around">
+	    <button type="button" class="btn btn-outline-dark col-sm-3" onclick="skg_load_usrp_server_config()">
+	      Load Config
+	    </button>
+	    <button type="button" class="btn btn-outline-dark col-sm-3" onclick="skg_update_usrp_server_config()">
+	      Update Config
+	    </button>
+	    <button type="button" class="btn btn-outline-dark col-sm-3" onclick="skg_shutdown_usrp_server_all_jobs()">
+	      Shutdown All Jobs
+	    </button>
+	  </div>
+	</div>
+
+	<div class="col-4">
+	  <!-- Role select -->
+	  <div class="mb-3 row">
+	    <label for="skg-client-role-form" class="col-sm-4 col-form-label"> Role </label>
+	    <div class="col-sm-8">
+	      <select class="form-select" id="skg-client-role-form">
+		<option value="select" selected> ⚙ Select</option>
+		<option value="self_txrx"> 🔧 Self TX/RX (For testing) </option>
+		<option value="alice"> 👩 Alice </option>
+		<option value="bob"> 👨 Bob </option>
+		<option value="eve"> 😈 Eve </option>
+	      </select>
+	    </div>
+	  </div>
+
+	  <!-- Occupied USRP Server Address -->
+	  <div class="mb-3 row">
+	    <label for="skg-client-usrp-server-addr-form" class="col-sm-4 col-form-label">
+	      Occupied USRP Address
+	    </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<span class="input-group-text"> tcp:// </span>
+		<input type="text" class="form-control" id="skg-client-usrp-server-addr-form" value="">
+		<button type="button" class="btn btn-outline-dark" id="test-skg-client-usrp-server-connection-button"
+			onclick="skg_skg_client_usrp_server_test_connection()">
+		  Test Connection
+		</button>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- Peer Server Address -->
+	  <div class="mb-3 row">
+	    <label for="skg-client-peer-server-addr-form" class="col-sm-4 col-form-label"> Peer Server Address </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<span class="input-group-text"> http:// </span>
+		<input type="text" class="form-control" id="skg-client-peer-server-addr-form" value="">
+		<button type="button" class="btn btn-outline-dark" id="test-peer-server-connection-button"
+			onclick="skg_peer_server_connection_test()">
+		  Test Connection
+		</button>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- TX Waveform file -->
+	  <div class="mb-3 row">
+	    <label for="tx-waveform-form" class="col-sm-4 col-form-label"> Send Waveform from </label>
+	    <div class="col-sm-8">
+	      <input type="text" class="form-control" id="tx-waveform-form" value="">
+	    </div>
+	  </div>
+
+	  <!-- CSI Directory -->
+	  <div class="mb-3 row">
+	    <label for="csi-directory-form" class="col-sm-4 col-form-label"> Save CSI to </label>
+	    <div class="col-sm-8">
+	      <input type="text" class="form-control" id="csi-directory-form" value="">
+	    </div>
+	  </div>
+
+	  <!-- Waveform Directory -->
+	  <div class="mb-3 row">
+	    <label for="waveform-directory-form" class="col-sm-4 col-form-label"> Save Waveform to </label>
+	    <div class="col-sm-8">
+	      <input type="text" class="form-control" id="waveform-directory-form" value="">
+	    </div>
+	  </div>
+
+	  <!-- Generated Key Directory -->
+	  <div class="mb-3 row">
+	    <label for="generated-key-directory-form" class="col-sm-4 col-form-label"> Save Generated Keys to </label>
+	    <div class="col-sm-8">
+	      <input type="text" class="form-control" id="generated-key-directory-form" value="">
+	    </div>
+	  </div>
+
+	  <!-- Run Key Agreement Protocol Every N Times -->
+	  <div class="mb-3 row">
+	    <label for="key-agreement-protocol-frequency-form" class="col-sm-4 col-form-label">
+	      Run Key Agreement Protocol Every
+	    </label>
+	    <div class="col-sm-8">
+	      <div class="input-group">
+		<input type="text" class="form-control" id="key-agreement-protocol-frequency-form" value="1">
+		<span class="input-group-text"> interaction(s) </span>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- CSI Processing Tool -->
+	  <div class="mb-3 row">
+	    <label for="skg-client-csi-processing-tool-form" class="col-sm-4 col-form-label"> CSI Processing Tool </label>
+	    <div class="col-sm-8">
+	      <select class="form-select" id="skg-client-csi-processing-tool-form">
+		<option value="matlab" selected> MATLAB </option>
+		<option value="internal"> Python </option>
+	      </select>
+	    </div>
+	  </div>
+
+	  <div class="mb-3 row">
+	    <label class="col-sm-4 col-form-label" for="sync-with-client-config"> Keep Config Sync with Client </label>
+	    <div class="col-sm-8">
+	      <div class="form-switch">
+		<input type="checkbox" class="form-check-input" id="sync-with-client-config"
+		       style="width: 3.5em; height: 2em;" checked>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- Update and Reset buttons -->
+	  <div class="mb-3 row justify-content-around">
+	    <button type="button" class="btn btn-outline-dark col-sm-3" onclick="skg_update_client_config()">
+	      Update Config
+	    </button>
+	    <button type="button" class="btn btn-outline-dark col-sm-3" onclick="skg_start()">
+	      Run
+	    </button>
+	    <button type="button" class="btn btn-outline-dark col-sm-3" onclick="skg_stop()">
+	      Stop
+	    </button>
+	  </div>
+
+
+	  <div class="mb-3 row justify-content-around">
+          <!-- quantization buttons -->
+	    <button type="button" class="btn btn-outline-dark col-sm-4" onclick="skg_quantization()">
+	      Quantization
+	    </button>
+          <!-- conciliation buttons -->
+	    <button type="button" class="btn btn-outline-dark col-sm-4" onclick="skg_conciliation()">
+	      Conciliation
+	    </button>
+      </div>
+
+        <div class="mb-3 row justify-content-around">
+        <!-- amplification buttons -->
+	    <button type="button" class="btn btn-outline-dark col-sm-4" onclick="skg_amplification()">
+	     Amplification
+	    </button>
+        <!-- encryption buttons -->
+	    <button type="button" class="btn btn-outline-dark col-sm-4" onclick="skg_encryption()">
+	     Encryption
+	    </button>
+	  </div>
+
+        <!-- Autorun buttons -->
+	  <!-- <div class="mb-3 row justify-content-around">
+	    <button type="button" class="btn btn-outline-dark row-cols-sm-5" onclick="skg_autorun()">
+	      Auto Run
+	    </button>
+	  </div> -->
+
+
+
+	  <!-- Plot.ly Canvas for generated key bits -->
+	  <div class="mb-3 row">
+	    <div class="" style="">
+	      <div id="plotly-canvas-key-bits"></div>
+	    </div>
+	  </div>
+	</div>
+
+	<!-- Plots and some other information -->
+	<div class="col-4">
+	  <!-- Plotting Options -->
+	  <div class="mb-3 row">
+	    <label for="role-form" class="col-sm-3 col-form-label"> Realtime Plotting </label>
+	    <div class="col-sm-6">
+	      <select class="form-select" id="role-form">
+		<option selected value="csi"> Channel State Information </option>
+		<option value="fft"> Fast Fourier Transform </option>
+	      </select>
+	    </div>
+	  </div>
+
+	  <!-- Plot.ly Canvas -->
+	  <div class="mb-3 row">
+	    <div>
+	      <div id="plotly-canvas-csi"></div>
+	    </div>
+	  </div>
+	  <script>
+	    const TESTER = document.getElementById("plotly-canvas-csi");
+	    const layout = {
+		margin: {t:0,r:0,b:0,l:20},
+		xaxis: {
+		    automargin: true,
+		    rangemode: "tozero",
+		    tickangle: 0,
+		    title: {
+			text: "Subcarrier Index",
+			font: {
+			    size: 20,
+			},
+			standoff: 10
+		    }},
+		yaxis: {
+		    automargin: true,
+		    rangemode: "tozero",
+		    tickangle: 0,
+		    title: {
+			text: "Amplitude",
+			font: {
+			    size: 20,
+			},
+			standoff: 20
+		    }}
+	    };
+	    Plotly.newPlot( TESTER, [{
+		line: {
+		    color: "rgb(142, 124, 195)",
+		    width: 6,
+		},
+		x: [...Array(410).keys()],
+		y: [10.882596,10.575971,10.643834,10.708347,10.769720,10.828138,10.883796,10.936869,10.987469,11.035641,11.081385,11.124650,11.165330,11.203249,11.238155,11.269672,11.297346,11.320771,11.339673,11.354188,11.365605,11.378426,11.399076,11.422982,11.449074,11.475467,11.500238,11.521731,11.539012,11.552502,11.562538,11.569236,11.573082,11.574773,11.576216,11.579812,11.586578,11.596892,11.611014,11.629734,11.653385,11.681701,11.714197,11.750264,11.788787,11.828588,11.868771,11.908991,11.948927,11.988538,12.028129,12.068950,12.110293,12.149806,12.186583,12.220774,12.252294,12.281647,12.309681,12.335010,12.357247,12.376910,12.394201,12.407490,12.416486,12.421874,12.424019,12.424524,12.425477,12.427228,12.429705,12.433330,12.438100,12.445334,12.456835,12.474001,12.495826,12.521003,12.549965,12.582372,12.617257,12.654156,12.692571,12.732229,12.772560,12.812471,12.850646,12.887434,12.924002,12.959818,12.994158,13.026398,13.055941,13.082080,13.104120,13.121500,13.134433,13.143177,13.148578,13.153434,13.159065,13.166380,13.176601,13.190786,13.207856,13.226540,13.246408,13.266984,13.287412,13.307022,13.324705,13.340101,13.352468,13.359470,13.359158,13.351197,13.337427,13.320349,13.301378,13.282559,13.266196,13.253138,13.243562,13.237484,13.235300,13.238408,13.248590,13.266140,13.290096,13.321254,13.359484,13.403239,13.450582,13.499272,13.547041,13.592036,13.633388,13.669783,13.698975,13.718262,13.727239,13.727181,13.720252,13.708633,13.694747,13.679774,13.663182,13.643860,13.621907,13.597894,13.572601,13.545352,13.515748,13.484901,13.454033,13.423363,13.392656,13.361253,13.328401,13.292760,13.252403,13.205540,13.150953,13.087736,13.015852,12.935773,12.847711,12.751598,12.647537,12.535519,12.415439,12.286759,12.147949,11.997475,11.833484,11.654545,11.459609,11.248776,11.023586,10.787015,10.542216,10.290877,10.033544,9.770609,9.502332,9.229339,8.952697,8.673255,8.391350,8.106589,7.819411,7.531168,7.243388,6.956941,6.672106,6.390116,6.112864,5.842505,5.580348,5.327377,5.084836,4.854222,4.637026,4.434630,4.248664,4.080969,3.933084,3.806629,3.703290,3.623520,3.566986,3.533586,3.523274,3.534800,3.566247,3.615717,3.681677,3.762769,3.857879,3.965913,4.085537,4.215139,4.352919,4.496961,4.645849,4.798420,4.953548,5.110175,5.267811,5.426125,5.584298,5.741147,5.895661,6.046935,6.193393,6.332931,6.463705,6.585226,6.698396,6.803988,6.902780,6.995428,7.082300,7.163805,7.240161,7.311911,7.379723,7.444186,7.505476,7.563564,7.618295,7.669474,7.717011,7.761718,7.805265,7.848828,7.892668,7.936154,7.978456,8.018742,8.056023,8.089493,8.119805,8.148472,8.176079,8.202730,8.229103,8.255771,8.282871,8.309626,8.334679,8.356300,8.372634,8.382620,8.386287,8.384465,8.379109,8.371649,8.362954,8.354611,8.348272,8.345067,8.345954,8.351290,8.361341,8.375570,8.394192,8.417979,8.446432,8.478648,8.514352,8.554292,8.598684,8.647256,8.698890,8.752080,8.804974,8.855192,8.900429,8.939929,8.974175,9.004174,9.030099,9.051429,9.068473,9.082081,9.092673,9.101547,9.109863,9.119026,9.130179,9.143470,9.157963,9.172179,9.185161,9.196687,9.206828,9.216322,9.225167,9.233372,9.240993,9.248072,9.254060,9.258848,9.262614,9.265767,9.267956,9.268315,9.267805,9.268071,9.270440,9.275235,9.282956,9.294130,9.308572,9.326447,9.348083,9.374184,9.405552,9.441009,9.478953,9.518315,9.558708,9.599759,9.641080,9.682826,9.724554,9.764520,9.801795,9.835436,9.864823,9.890594,9.912878,9.931037,9.945339,9.956876,9.966620,9.974544,9.980656,9.984331,9.985136,9.984127,9.983238,9.982281,9.980723,9.978622,9.976002,9.973101,9.970209,9.968159,9.968197,9.971848,9.980575,9.995500,10.017447,10.045881,10.079834,10.118514,10.161157,10.205512,10.249252,10.290938,10.329975,10.365941,10.398924,10.428853,10.455948,10.481646,10.507551,10.535518,10.565189,10.595458,10.623565,10.648581,10.671002,10.691344,10.710010,10.727323,10.743572,10.758983,10.773668,10.787680,10.801050,10.813788,10.825882,10.837313,10.848038,10.857987,10.867079,10.875278,10.882596]
+	    }], layout);
+	  </script>
+	</div>
+      </div>
+    </div>
+  </body>
+</html>

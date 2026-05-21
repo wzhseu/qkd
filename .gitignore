@@ -1,0 +1,43 @@
+# Dependency directories
+node_modules/
+
+# Python environments and caches
+.venv/
+venv/
+env/
+.venv*/
+.conda*/
+__pycache__/
+*.py[cod]
+
+# Build output and local tooling
+dist/
+build/
+.playwright-mcp/
+.gitdata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Runtime data and generated secrets
+*.db
+*.sqlite
+*.sqlite3
+*.enc
+*SecretKey*.txt
+*GeneratedKey*.txt
+*Generatedkey*.txt
+*OriginalKey*.txt
+*Originalkey*.txt
+*catch_q_key*.txt
+*SecretKeyQuantized*.mat
+
+# Local backup folders
+_backup*/
+_rollback*/
