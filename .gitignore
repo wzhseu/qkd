@@ -26,6 +26,14 @@ Thumbs.db
 .vscode/
 
 # Runtime data and generated secrets
+*.log
+*.zip
+log*.txt
+qkd_center_*.txt
+physical-key-tab-preview.png
+qkd-center-preview.png
+Physical_Keys/
+QKD_Keys/
 *.db
 *.sqlite
 *.sqlite3

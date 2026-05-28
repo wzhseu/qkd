@@ -156,6 +156,13 @@ def get_physical_key(key_id: str) -> Optional[PhysicalKey]:
     return PhysicalKey.query.get(key_id)
 
 
+def list_physical_keys(status: Optional[str] = None, limit: int = 100) -> List[PhysicalKey]:
+    q = PhysicalKey.query
+    if status:
+        q = q.filter_by(status=status)
+    return q.order_by(PhysicalKey.created_at.desc()).limit(limit).all()
+
+
 def get_key_session(session_id: str) -> Optional[KeySession]:
     return KeySession.query.get(session_id)
 
@@ -200,6 +207,73 @@ def get_or_create_session_key(session_id: str, self_id: str, peer_id: str) -> Ke
     return session
 
 
+def cache_cloud_session_key(session_key: dict, self_id: str) -> None:
+    """Mirror a cloud-authoritative session key binding into the local gateway DB."""
+    session_id = session_key.get('session_id')
+    quantum_value = (session_key.get('quantum_key_value') or '').strip().lower()
+    physical_key_id = session_key.get('physical_key_id')
+    physical_value = (session_key.get('physical_key_value') or '').strip().lower()
+    party_a = session_key.get('party_a')
+    party_b = session_key.get('party_b')
+    if not session_id or not quantum_value or not physical_key_id or not physical_value:
+        raise ValueError('cloud session response is missing key fields')
+    if not HEX_64_RE.match(quantum_value):
+        raise ValueError('cloud quantum key must be 64 hex characters')
+    if not HEX_32_RE.match(physical_value):
+        raise ValueError('cloud physical key must be 32 hex characters')
+
+    quantum_hash = compute_hash(quantum_value)
+    quantum_key = Key.query.filter_by(key_hash=quantum_hash).first()
+    if not quantum_key:
+        quantum_key = Key(
+            key_value=quantum_value,
+            key_hash=quantum_hash,
+            status='reserved',
+            source='cloud-session',
+            length=len(quantum_value),
+            request_ip=f"{party_a}<->{party_b}:{session_id}",
+        )
+        db.session.add(quantum_key)
+        db.session.flush()
+
+    physical_hash = compute_hash(physical_value)
+    physical_key = PhysicalKey.query.get(physical_key_id)
+    if not physical_key:
+        physical_key = PhysicalKey(
+            id=physical_key_id,
+            key_value=physical_value,
+            key_hash=physical_hash,
+            status='reserved',
+            source='cloud-session',
+            session_id=session_id,
+        )
+        db.session.add(physical_key)
+    else:
+        physical_key.key_value = physical_value
+        physical_key.key_hash = physical_hash
+        physical_key.session_id = physical_key.session_id or session_id
+        if physical_key.status == 'unused':
+            physical_key.status = 'reserved'
+
+    session = KeySession.query.get(session_id)
+    if not session:
+        session = KeySession(
+            session_id=session_id,
+            party_a=party_a,
+            party_b=party_b,
+            quantum_key_id=quantum_key.id,
+            physical_key_id=physical_key.id,
+        )
+        db.session.add(session)
+    session.claim(self_id)
+    if session_key.get('status') == 'used' or (session.claimed_a_at and session.claimed_b_at):
+        session.status = 'used'
+        session.used_at = session.used_at or datetime.utcnow()
+        quantum_key.mark_used(request_ip=f"{party_a}<->{party_b}:{session_id}")
+        physical_key.mark_used()
+    db.session.commit()
+
+
 def list_keys(status: Optional[str] = None, limit: int = 100) -> List[Key]:
     """查询密钥列表"""
     q = Key.query
@@ -241,11 +315,17 @@ def get_physical_key_stats() -> dict:
     unused = PhysicalKey.query.filter_by(status='unused').count()
     reserved = PhysicalKey.query.filter_by(status='reserved').count()
     used = PhysicalKey.query.filter_by(status='used').count()
+    by_status = dict(
+        db.session.query(PhysicalKey.status, func.count(PhysicalKey.id))
+        .group_by(PhysicalKey.status)
+        .all()
+    )
     return {
         'total': total,
         'unused': unused,
         'reserved': reserved,
         'used': used,
+        'by_status': by_status,
     }
 
 

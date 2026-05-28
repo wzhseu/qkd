@@ -109,9 +109,6 @@ class PhysicalKeyStore:
                 if column not in existing:
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
         conn.execute("UPDATE physical_keys SET status = 'unused' WHERE status = 'available'")
-        conn.execute(
-            "UPDATE physical_keys SET key_hash = lower(hex(sha1_placeholder)) WHERE 1 = 0"
-        )
         rows = conn.execute("SELECT id, key_value FROM physical_keys WHERE key_hash IS NULL OR key_hash = ''").fetchall()
         for row in rows:
             conn.execute(
@@ -235,7 +232,7 @@ class PhysicalKeyStore:
             if existing:
                 if existing["key_value"] != key_value.lower():
                     conn.execute(
-                        "UPDATE physical_keys SET sync_status = 'conflict', updated_at = ? WHERE id = ?",
+                        "UPDATE physical_keys SET status = 'conflict', sync_status = 'conflict', updated_at = ? WHERE id = ?",
                         (datetime.utcnow().isoformat(), key_id),
                     )
                 return False
@@ -324,12 +321,74 @@ class PhysicalKeyStore:
             row = conn.execute("SELECT * FROM physical_keys ORDER BY created_at DESC LIMIT 1").fetchone()
         return self._row_to_dict(row, include_secret=True) if row else None
 
-    def get_key_record(self, key_id):
+    def get_key_record(self, key_id, include_secret=False):
         with self._connect() as conn:
             row = conn.execute("SELECT * FROM physical_keys WHERE id = ?", (key_id,)).fetchone()
-        return self._row_to_dict(row, include_secret=False) if row else None
+        return self._row_to_dict(row, include_secret=include_secret) if row else None
 
-    def list_keys(self, status=None, limit=100):
+    def reserve_key(self, session_id, quantum_key_id=None):
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT * FROM physical_keys WHERE status = 'unused' ORDER BY created_at ASC, id ASC LIMIT 1"
+            ).fetchone()
+            if not row:
+                conn.rollback()
+                raise ValueError("no unused physical key available")
+            conn.execute(
+                """
+                UPDATE physical_keys
+                SET status = 'reserved', session_id = ?, quantum_key_id = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (session_id, str(quantum_key_id) if quantum_key_id is not None else None, now, row["id"]),
+            )
+            conn.commit()
+        return self.get_key_record(row["id"], include_secret=True)
+
+    def mark_used(self, key_id):
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE physical_keys
+                SET status = 'used', distributed_at = COALESCE(distributed_at, ?), updated_at = ?
+                WHERE id = ?
+                """,
+                (now, now, key_id),
+            )
+        return self.get_key_record(key_id, include_secret=True)
+
+    def record_claim_distribution(self, key_id, requestor=None, request_ip=None, session_id=None, quantum_key_id=None, gateway_id=None):
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            row = conn.execute("SELECT distributed_to FROM physical_keys WHERE id = ?", (key_id,)).fetchone()
+            distributed_to = self._merge_csv(row["distributed_to"] if row else None, requestor)
+            conn.execute(
+                """
+                UPDATE physical_keys
+                SET distributed_to = ?, distributed_count = COALESCE(distributed_count, 0) + 1,
+                    session_id = COALESCE(session_id, ?),
+                    quantum_key_id = COALESCE(quantum_key_id, ?),
+                    distributed_at = COALESCE(distributed_at, ?),
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (distributed_to, session_id, str(quantum_key_id) if quantum_key_id is not None else None, now, now, key_id),
+            )
+            self.record_distribution(
+                key_id,
+                requestor,
+                request_ip,
+                session_id,
+                str(quantum_key_id) if quantum_key_id is not None else None,
+                "success",
+                f"gateway={gateway_id}" if gateway_id else None,
+                conn=conn,
+            )
+
+    def list_keys(self, status=None, limit=100, include_secret=False):
         sql = "SELECT * FROM physical_keys"
         params = []
         if status:
@@ -339,7 +398,7 @@ class PhysicalKeyStore:
         params.append(limit)
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
-        return [self._row_to_dict(row, include_secret=False) for row in rows]
+        return [self._row_to_dict(row, include_secret=include_secret) for row in rows]
 
     def list_distributions(self, limit=100):
         with self._connect() as conn:

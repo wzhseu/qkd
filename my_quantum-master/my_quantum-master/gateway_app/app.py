@@ -18,6 +18,7 @@ from gateway_app.db_ops import (
     list_imported_files,
     list_keys,
     list_logs,
+    list_physical_keys,
     save_key,
     save_log,
 )
@@ -188,6 +189,19 @@ def api_get_physical_key(physical_key_id):
     if not key:
         return jsonify({'error': 'physical key not found'}), 404
     return jsonify({'success': True, 'key': key.to_dict()})
+
+
+@app.route('/api/physical-keys', methods=['GET'])
+def api_list_physical_keys():
+    status = request.args.get('status')
+    limit = min(int(request.args.get('limit', 100)), 1000)
+    keys = []
+    for key in list_physical_keys(status=status, limit=limit):
+        item = key.to_dict()
+        item.pop('key_value', None)
+        item['physical_key_id'] = item['id']
+        keys.append(item)
+    return jsonify({'count': len(keys), 'keys': keys})
 
 
 @app.route('/api/physical-keys/stats', methods=['GET'])

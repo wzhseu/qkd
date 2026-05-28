@@ -27,14 +27,44 @@ HEX_32_RE = re.compile(r"^[0-9a-fA-F]{32}$")
 
 
 class KeySocketServer:
-    def __init__(self, host='0.0.0.0', port=9000, app=None, sm4_key=None):
+    def __init__(self, host='0.0.0.0', port=9000, app=None, sm4_key=None,
+                 cloud_session_enabled=None, cloud_base_url=None, gateway_id=None,
+                 cloud_timeout_sec=None, cloud_fallback_local=None):
         self.host = host
         self.port = port
         self.app = app
         self.sm4_key = sm4_key
+        config = self._load_config()
+        self.cloud_session_enabled = (
+            cloud_session_enabled
+            if cloud_session_enabled is not None
+            else config.getboolean('cloud_session', 'enabled', fallback=True)
+        )
+        self.cloud_base_url = (
+            cloud_base_url
+            or config.get('cloud_session', 'cloud_base_url', fallback='http://localhost:8088')
+        ).rstrip('/')
+        self.gateway_id = gateway_id or config.get('cloud_session', 'gateway_id', fallback=f'gateway-{port}')
+        self.cloud_timeout_sec = (
+            cloud_timeout_sec
+            if cloud_timeout_sec is not None
+            else config.getint('cloud_session', 'timeout_sec', fallback=10)
+        )
+        self.cloud_fallback_local = (
+            cloud_fallback_local
+            if cloud_fallback_local is not None
+            else config.getboolean('cloud_session', 'fallback_local', fallback=True)
+        )
         self.server_socket = None
         self.running = False
         self._thread = None
+
+    @staticmethod
+    def _load_config():
+        cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        cfg.read(os.path.join(app_dir, 'config.ini'), encoding='utf-8')
+        return cfg
 
     def start(self):
         if self.running:
@@ -160,6 +190,14 @@ class KeySocketServer:
         if not self.app:
             raise ValueError('gateway app context is not available')
 
+        if self.cloud_session_enabled:
+            try:
+                return self._get_cloud_session_key_response(session_id, self_id, peer_id, client_ip)
+            except Exception as exc:
+                print(f"[SocketServer] Cloud session coordinator error: {exc}")
+                if not self.cloud_fallback_local:
+                    raise
+
         with self.app.app_context():
             from gateway_app.db_ops import get_or_create_session_key, save_log
 
@@ -179,6 +217,41 @@ class KeySocketServer:
                 'peer_id': peer_id,
                 'quantum_key_id': session.quantum_key_id,
                 'physical_key_id': session.physical_key_id,
+                'encrypted_key_b64': base64.b64encode(encrypted).decode('ascii'),
+            }
+
+    def _get_cloud_session_key_response(self, session_id, self_id, peer_id, client_ip):
+        with self.app.app_context():
+            from gateway_app.cloud_session import claim_cloud_session_key
+            from gateway_app.db_ops import cache_cloud_session_key, save_log
+
+            session_key = claim_cloud_session_key(
+                self.cloud_base_url,
+                self.gateway_id,
+                session_id,
+                self_id,
+                peer_id,
+                timeout=self.cloud_timeout_sec,
+            )
+            cache_cloud_session_key(session_key, self_id)
+            encrypted = self._encrypt_with_physical_key(
+                session_key['quantum_key_value'],
+                session_key['physical_key_value'],
+            )
+            save_log(
+                f"Cloud session key: {self_id} from {client_ip} got session={session_id}, "
+                f"cloud_quantum_key={session_key['quantum_key_id']}, "
+                f"physical_key={session_key['physical_key_id']}, gateway={self.gateway_id}",
+                source='socket',
+            )
+            return {
+                'status': 'ok',
+                'session_id': session_key['session_id'],
+                'self_id': self_id,
+                'peer_id': peer_id,
+                'gateway_id': self.gateway_id,
+                'quantum_key_id': session_key['quantum_key_id'],
+                'physical_key_id': session_key['physical_key_id'],
                 'encrypted_key_b64': base64.b64encode(encrypted).decode('ascii'),
             }
 
